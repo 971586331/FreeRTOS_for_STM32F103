@@ -3,6 +3,8 @@
 #include "sys.h"
 #include "FreeRTOS.h"
 #include "task.h"
+#include "croutine.h"
+
 /************************************************
  ALIENTEK Mini STM32F103开发板 FreeRTOS实验2-1
  FreeRTOS移植实验-库函数版本
@@ -29,7 +31,7 @@ void start_task(void *pvParameters);
 //任务句柄
 TaskHandle_t LED0Task_Handler;
 //任务函数
-void led0_task(void *pvParameters);
+void pt_task(void *pvParameters);
 
 //任务优先级
 #define LED1_TASK_PRIO		3
@@ -39,6 +41,8 @@ void led0_task(void *pvParameters);
 TaskHandle_t LED1Task_Handler;
 //任务函数
 void led1_task(void *pvParameters);
+
+void vLedCoRoutine( CoRoutineHandle_t xHandle, UBaseType_t uxIndex );
 
 int main(void)
 {
@@ -63,8 +67,8 @@ void start_task(void *pvParameters)
 {
     taskENTER_CRITICAL();           //进入临界区
     //创建LED0任务
-    xTaskCreate((TaskFunction_t )led0_task,     	
-                (const char*    )"led0_task",   	
+    xTaskCreate((TaskFunction_t )pt_task,     	
+                (const char*    )"pt_task",   	
                 (uint16_t       )LED0_STK_SIZE, 
                 (void*          )NULL,				
                 (UBaseType_t    )LED0_TASK_PRIO,	
@@ -81,12 +85,12 @@ void start_task(void *pvParameters)
 }
 
 //LED0任务函数 
-void led0_task(void *pvParameters)
+void pt_task(void *pvParameters)
 {
+    xCoRoutineCreate( vLedCoRoutine, 0, 0 );
     while(1)
     {
-        LED0=~LED0;
-        vTaskDelay(500);
+        vCoRoutineSchedule();
     }
 }   
 
@@ -95,10 +99,22 @@ void led1_task(void *pvParameters)
 {
     while(1)
     {
-        LED1=0;
-        vTaskDelay(200);
-        LED1=1;
-        vTaskDelay(800);
+        LED1 = ~LED1;
+        vTaskDelay(1000);
     }
+}
+
+// 协程任务函数
+void vLedCoRoutine( CoRoutineHandle_t xHandle, UBaseType_t uxIndex )
+{
+    crSTART( xHandle );
+    while(1)
+    {
+        LED0 = 0;
+        crDELAY( xHandle, 100 );
+        LED0 = 1;
+        crDELAY( xHandle, 100 );
+    }
+    crEND();
 }
 
